@@ -52,7 +52,6 @@ typedef struct Controller
 	SDL_JoystickID			joystickInstance;
 	KeyState				needStates[NUM_CONTROL_NEEDS];
 	float					needAnalog[NUM_CONTROL_NEEDS];
-	float					needAnalogRaw[NUM_CONTROL_NEEDS];
 } Controller;
 
 Boolean				gUserPrefersGamepad = false;
@@ -201,9 +200,7 @@ static void UpdateControllerSpecificInputNeeds(int controllerNum)
 						   ? kJoystickDeadZoneFrac_UI
 						   : kJoystickDeadZoneFrac;
 
-		bool pressed = false;
 		float actuation = 0;
-		float analogRaw = 0;
 
 		for (int buttonNum = 0; buttonNum < MAX_BINDINGS_PER_NEED; buttonNum++)
 		{
@@ -214,38 +211,37 @@ static void UpdateControllerSpecificInputNeeds(int controllerNum)
 			{
 				if (0 != SDL_GameControllerGetButton(controllerInstance, pb->id))
 				{
-					pressed = true;
 					actuation = 1;
 				}
 			}
 			else if (type == kInputTypeAxisPlus || type == kInputTypeAxisMinus)
 			{
+				float value;
 				int16_t axis = SDL_GameControllerGetAxis(controllerInstance, pb->id);
-				if (type == kInputTypeAxisPlus)
-					analogRaw = axis * (1.0f / 32767.0f);
-				else
-					analogRaw = axis * (1.0f / -32768.0f);
 
-				if (analogRaw < 0)
-					analogRaw = 0;
+				// Normalize axis value to [0, 1]
+				if (type == kInputTypeAxisPlus)
+					value = axis * (1.0f / 32767.0f);
+				else
+					value = axis * (1.0f / -32768.0f);
+
+				// Avoid magnitude bump when thumbstick is pushed past dead zone:
+				// Bring magnitude from [kJoystickDeadZoneFrac, 1.0] to [0.0, 1.0].
+				value = (value - deadZoneFrac) / (1.0f - deadZoneFrac);
+				value = SDL_max(0, value);	// clamp to 0 if within dead zone
 
 #if _DEBUG
-				GAME_ASSERT(analogRaw >= 0);
+				GAME_ASSERT(value >= 0);
+				GAME_ASSERT(value <= 1);
 #endif
 
-				if (analogRaw >= deadZoneFrac)
-				{
-					pressed = true;
-					float pastDeadZone = analogRaw - deadZoneFrac / (1.0f - deadZoneFrac);
-					actuation = SDL_max(actuation, pastDeadZone);
-				}
+				actuation = SDL_max(actuation, value);
 			}
 		}
 
 		controller->needAnalog[needNum] = actuation;
-		controller->needAnalogRaw[needNum] = analogRaw;
 
-		UpdateKeyState(&controller->needStates[needNum], pressed);
+		UpdateKeyState(&controller->needStates[needNum], actuation >= .5f);
 	}
 }
 
@@ -475,7 +471,7 @@ Boolean GetNewNeedStateAnyP(int needID)
 	return gNeedStates[needID] == KEYSTATE_PRESSED;
 }
 
-static float GetAnalogValue(int needID, bool raw, int playerID)
+static float GetAnalogValue(int needID, int playerID)
 {
 	GAME_ASSERT(playerID >= 0);
 	GAME_ASSERT(playerID < MAX_LOCAL_PLAYERS);
@@ -490,26 +486,10 @@ static float GetAnalogValue(int needID, bool raw, int playerID)
 		return 1.0f;
 	}
 
-	if (controller->open && controller->needAnalogRaw[needID] != 0.0f)
+	if (controller->open)
 	{
-		float value = controller->needAnalogRaw[needID];
-#if _DEBUG
-		GAME_ASSERT(value >= 0);
-		GAME_ASSERT(value <= 1);
-#endif
-
-		if (!raw)
-		{
-			// Adjust value for dead zone.
-			float deadZone = needID < NUM_REMAPPABLE_NEEDS ? kJoystickDeadZoneFrac : kJoystickDeadZoneFrac_UI;
-
-			// Avoid magnitude bump when thumbstick is pushed past dead zone:
-			// Bring magnitude from [kJoystickDeadZoneFrac, 1.0] to [0.0, 1.0].
-			value = (value - deadZone) / (1.0f - deadZone);
-			value = SDL_max(0, value);	// clamp to 0 if within dead zone
-		}
-
-		return value;
+		// needAnalog is already dead-zone-adjusted in UpdateControllerSpecificInputNeeds
+		return controller->needAnalog[needID];
 	}
 
 	return 0;
@@ -517,8 +497,8 @@ static float GetAnalogValue(int needID, bool raw, int playerID)
 
 float GetNeedAxis1D(int negativeNeedID, int positiveNeedID, int playerID)
 {
-	float neg = GetAnalogValue(negativeNeedID, false, playerID);
-	float pos = GetAnalogValue(positiveNeedID, false, playerID);
+	float neg = GetAnalogValue(negativeNeedID, playerID);
+	float pos = GetAnalogValue(positiveNeedID, playerID);
 
 	if (neg > pos)
 	{
