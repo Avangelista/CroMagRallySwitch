@@ -7,6 +7,8 @@
 #include <switch.h>
 #include <unistd.h>
 #include <cstdio>
+#include <cstdlib>
+#include <sys/stat.h>
 #include <SDL.h>
 
 static int s_nxlinkSock = -1;
@@ -40,6 +42,13 @@ extern "C" void userAppInit() {
 	nxlinkInit();
 	romfsInit();
 	fsdevMountSdmc();		// mount the SD card as "sdmc:/" so prefs/saves can be written
+
+	// Route the game's prefs/saves to the standard homebrew location on the SD card.
+	// Pomme's FindFolder(kPreferencesFolderType) reads XDG_CONFIG_HOME on non-Win/Mac
+	// platforms, so pointing it at sdmc:/switch lands prefs in sdmc:/switch/CroMagRally/
+	// WITHOUT having to patch (and fork) the Pomme submodule.
+	mkdir("sdmc:/switch", 0777);							// ensure the base dir exists (usually already does)
+	setenv("XDG_CONFIG_HOME", "sdmc:/switch", 1);
 
 	SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "1");
 }
