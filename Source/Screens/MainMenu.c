@@ -24,7 +24,9 @@
 
 static void SetupMainMenuScreen(void);
 
+#ifndef __SWITCH__
 static void OnPickQuitApplication(const MenuItem* mi);
+#endif
 static void OnPickCredits(const MenuItem* mi);
 static void OnConfirmPlayMenu(const MenuItem* mi);
 static void OnPickGameMode(const MenuItem* mi);
@@ -64,7 +66,9 @@ static const MenuItem gMainMenuTree[] =
 	{kMIPick, STR_NEW_GAME,		.next='play', },
 	{kMIPick, STR_OPTIONS,		.next='optn', },
 	{kMIPick, STR_EXTRAS,		.next='xtra', },
-	{kMIPick, STR_QUIT,			.next='EXIT', .callback=OnPickQuitApplication, .id=MENU_EXITCODE_QUITGAME },
+#ifndef __SWITCH__
+	{kMIPick, STR_QUIT,			.next='EXIT', .callback=OnPickQuitApplication, .id=MENU_EXITCODE_QUITGAME },	// exit via HOME on Switch
+#endif
 
 	{ .id='play' },
 	{kMIPick, STR_1PLAYER,	.id=1, .callback=OnConfirmPlayMenu, .next='spgm' },
@@ -374,12 +378,14 @@ OGLVector3D			fillDirection2 = { -1, -.2, -.5 };
 
 #pragma mark - Menu Callbacks
 
+#ifndef __SWITCH__	// no QUIT button on Switch (exit via HOME)
 static void OnPickQuitApplication(const MenuItem* mi)
 {
 	gGameView->fadeSound = true;
 	gGameView->fadePillarbox = true;
 	gGameView->fadeOutDuration = .3f;
 }
+#endif
 
 static void OnPickCredits(const MenuItem* mi)
 {

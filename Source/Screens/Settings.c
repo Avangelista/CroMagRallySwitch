@@ -105,7 +105,11 @@ static void OnChangeMSAA(const MenuItem* mi)
 const MenuItem gSettingsMenuTree[] =
 {
 	{.id='sett'},
+#ifdef __SWITCH__
+	{kMIPick, STR_CONTROLS, .next='gpad'},		// Switch has no keyboard -- straight to gamepad setup
+#else
 	{kMIPick, STR_CONTROLS, .next='ctrl'},
+#endif
 	{kMIPick, STR_SOUND, .next='soun'},
 	{kMIPick, STR_GRAPHICS, .next='graf'},
 	{kMIPick, STR_LANGUAGE, .next='lang'},
@@ -151,6 +155,7 @@ const MenuItem gSettingsMenuTree[] =
 	},
 
 	{.id='graf'},
+#ifndef __SWITCH__
 	{
 		kMICycler1, STR_FULLSCREEN,
 		.callback=OnToggleFullscreen,
@@ -160,6 +165,7 @@ const MenuItem gSettingsMenuTree[] =
 			.choices={ {STR_OFF, 0}, {STR_ON, 1} },
 		},
 	},
+#endif
 	{
 		kMICycler1, STR_PREFERRED_DISPLAY,
 		.callback = OnToggleFullscreen,
@@ -190,9 +196,11 @@ const MenuItem gSettingsMenuTree[] =
 			},
 		},
 	},
+#ifndef __SWITCH__
 	{kMISpacer, .customHeight=.5f },
 	{kMILabel, STR_FULLSCREEN_HINT, .customHeight=.5f },
 	{kMISpacer, .customHeight=.5f },
+#endif
 
 	{.id='lang'},
 	{kMIPick, STR_ENGLISH,	.id=LANGUAGE_ENGLISH,	.callback=OnPickLanguage,	.next='BACK'},

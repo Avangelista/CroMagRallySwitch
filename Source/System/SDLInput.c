@@ -54,7 +54,11 @@ typedef struct Controller
 	float					needAnalog[NUM_CONTROL_NEEDS];
 } Controller;
 
+#ifdef __SWITCH__
+Boolean				gUserPrefersGamepad = true;		// Switch has no keyboard: always show controller prompts
+#else
 Boolean				gUserPrefersGamepad = false;
+#endif
 
 static Boolean		gControllerPlayerMappingLocked = false;
 Controller			gControllers[MAX_LOCAL_PLAYERS];
