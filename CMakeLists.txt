@@ -76,6 +76,16 @@ endif()
 
 set(GAME_SRCDIR ${CMAKE_CURRENT_SOURCE_DIR}/Source)
 
+# Build version string for the Switch hbmenu NACP metadata (the in-game corner
+# keeps the plain numeric game version -- no room for a suffix there). GAME_VERSION
+# stays numeric for project()/CMake; only this NACP string gets the "-switch"
+# marker so the homebrew port build is distinguishable from upstream.
+if(NINTENDO_SWITCH)
+	set(GAME_DISPLAY_VERSION "${GAME_VERSION}-switch")
+else()
+	set(GAME_DISPLAY_VERSION "${GAME_VERSION}")
+endif()
+
 # Write header file containing version info
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.h.in ${GAME_SRCDIR}/Headers/version.h)
 
@@ -317,7 +327,7 @@ elseif(NINTENDO_SWITCH)
 	nx_generate_nacp(${GAME_TARGET}.nacp
 		NAME "${GAME_MAC_BUNDLE_NAME}"
 		AUTHOR "Pangea Software, Iliyas Jorio"
-		VERSION ${GAME_VERSION})
+		VERSION ${GAME_DISPLAY_VERSION})
 	nx_create_nro(${GAME_TARGET}
 		NACP ${GAME_TARGET}.nacp
 		ICON ${CMAKE_SOURCE_DIR}/packaging/CroMagRallySwitch.jpg
