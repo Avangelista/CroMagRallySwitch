@@ -44,6 +44,10 @@ static fs::path FindGameData(const char* executablePath)
 	if (!executablePath)
 		attemptNum = 2;
 
+#ifdef __SWITCH__
+	attemptNum = 3;			// Switch: assets are baked into the NRO RomFS (mounted at romfs:/)
+#endif
+
 tryAgain:
 	switch (attemptNum)
 	{
@@ -59,6 +63,10 @@ tryAgain:
 
 		case 2:
 			dataPath = "Data";
+			break;
+
+		case 3:			// Nintendo Switch: RomFS mount (see SwitchMisc.cpp userAppInit -> romfsInit)
+			dataPath = "romfs:/";
 			break;
 
 		default:
@@ -283,6 +291,8 @@ int main(int argc, char** argv)
 	if (showFinalErrorMessage)
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Uncaught exception: %s\n", finalErrorMessage.c_str());
+		fprintf(stderr, "!!! Cro-Mag Rally uncaught exception: %s\n", finalErrorMessage.c_str());
+		fflush(stderr);
 		SDL_ShowSimpleMessageBox(0, "Cro-Mag Rally: Uncaught exception", finalErrorMessage.c_str(), nullptr);
 	}
 

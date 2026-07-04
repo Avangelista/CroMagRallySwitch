@@ -143,13 +143,30 @@ enum
 };
 
 
-#define STATUS_BITS_FOR_2D \
-	(STATUS_BIT_NOTEXTUREWRAP \
-	| STATUS_BIT_DONTCULL \
-	| STATUS_BIT_NOZBUFFER \
-	| STATUS_BIT_NOZWRITES \
-	| STATUS_BIT_NOFOG \
-	| STATUS_BIT_NOLIGHTING)
+#ifdef __SWITCH__
+	// On the Switch GLES1 path, the 2D ortho/NDC projections produce the opposite
+	// triangle winding to the desktop build, so every 2D object (font TextMesh,
+	// background pictures, quad meshes) comes out as back-faces and gets culled --
+	// leaving only the view's clear color (e.g. the tan MainMenu background). Mark
+	// all 2D objects double-sided. The game's own immediate-mode text path already
+	// disables culling (Atlas.c), so this just brings the vertex-array 2D draws in line.
+	#define STATUS_BITS_FOR_2D \
+		(STATUS_BIT_NOTEXTUREWRAP \
+		| STATUS_BIT_DONTCULL \
+		| STATUS_BIT_KEEPBACKFACES \
+		| STATUS_BIT_NOZBUFFER \
+		| STATUS_BIT_NOZWRITES \
+		| STATUS_BIT_NOFOG \
+		| STATUS_BIT_NOLIGHTING)
+#else
+	#define STATUS_BITS_FOR_2D \
+		(STATUS_BIT_NOTEXTUREWRAP \
+		| STATUS_BIT_DONTCULL \
+		| STATUS_BIT_NOZBUFFER \
+		| STATUS_BIT_NOZWRITES \
+		| STATUS_BIT_NOFOG \
+		| STATUS_BIT_NOLIGHTING)
+#endif
 
 
 #include "structs.h"

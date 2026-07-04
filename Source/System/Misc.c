@@ -316,18 +316,51 @@ uint32_t* cookiePtr;
 }
 
 
+/****************** REALLOC PTR ********************/
+//
+// Retrofit: at this SDL2 base commit (41c5ae4) jorio declared+used ReallocPtr
+// (stb_image's STBI_REALLOC) but its definition only landed in a later commit.
+// Implemented against this build's simple 16-byte 'FACE' cookie scheme, using
+// Pomme's GetPtrSize to learn the old size (NewPtr blocks are new[]-backed, so
+// C realloc() must NOT be used on them).
+
+void *ReallocPtr(void* initialPtr, long newSize)
+{
+	if (initialPtr == nil)
+		return AllocPtr(newSize);
+
+	Ptr  oldBlock  = ((Ptr) initialPtr) - 16;				// back up to the NewPtr'd cookie block
+	long oldUsable = (long) GetPtrSize(oldBlock) - 16;		// original usable size
+
+	void* newPtr   = AllocPtr(newSize);
+	long  copySize = (newSize < oldUsable) ? newSize : oldUsable;
+	if (copySize > 0)
+		BlockMove(initialPtr, newPtr, copySize);
+
+	SafeDisposePtr(initialPtr);
+	return newPtr;
+}
+
+
 /***************** SAFE DISPOSE PTR ***********************/
 
-void SafeDisposePtr(Ptr ptr)
+void SafeDisposePtr(void* ptr_)
 {
+Ptr ptr;
 uint32_t* cookiePtr;
 
+	if (ptr_ == nil)			// free(NULL) / STBI_FREE(NULL) must be a harmless no-op
+		return;
+
+	ptr = (Ptr) ptr_;			// header declares void*; use Ptr locally for byte arithmetic (GCC15 strictness)
 	ptr -= 16;					// back up to pt to cookie
 
 	cookiePtr = (uint32_t*) ptr;
 
 	if (*cookiePtr != 'FACE')
-		DoFatalAlert("SafeSafeDisposePtr: invalid cookie!");
+	{
+		DoFatalAlert("SafeDisposePtr: invalid cookie!");
+	}
 
 	*cookiePtr = 0;
 

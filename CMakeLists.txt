@@ -66,7 +66,9 @@ add_compile_definitions(POMME_CASE_SENSITIVE_FSSPEC=1)
 add_subdirectory(extern/Pomme)
 
 find_package(SDL2 REQUIRED COMPONENTS main)
-find_package(OpenGL REQUIRED)
+if(NOT NINTENDO_SWITCH)
+	find_package(OpenGL REQUIRED)		# Switch uses -lGLESv1_CM instead (no desktop libGL portlib)
+endif()
 
 #------------------------------------------------------------------------------
 # GAME SOURCES
@@ -96,8 +98,14 @@ source_group(TREE ${GAME_SRCDIR} PREFIX "" FILES ${GAME_ALL_SOURCES})
 set(GAME_LIBRARIES
 	Pomme
 	${SDL2_LIBRARIES}
-	OpenGL::GL
 )
+
+if(NINTENDO_SWITCH)
+	# GLES 1.1 fixed-function profile — replaces desktop OpenGL::GL on Switch
+	list(APPEND GAME_LIBRARIES -lGLESv1_CM)
+else()
+	list(APPEND GAME_LIBRARIES OpenGL::GL)
+endif()
 
 if(WIN32)
 	# "WIN32" here is equivalent to /SUBSYSTEM:WINDOWS for MSVC
@@ -127,6 +135,27 @@ target_include_directories(${GAME_TARGET} PRIVATE
 	extern/Pomme/src
 	${GAME_SRCDIR}/Headers
 )
+
+if(NINTENDO_SWITCH)
+	# CXX-only -fno-rtti (mirrors Nanosaur). Source/System/SwitchMisc.cpp is picked
+	# up by the GLOB_RECURSE over Source/; -lGLESv1_CM was appended to GAME_LIBRARIES.
+	target_compile_options(${GAME_TARGET}
+		PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
+	dkp_target_generate_symbol_list(${GAME_TARGET})
+
+	# glColor4f is a real GLES1 symbol; wrap it so the immediate-mode emulator in
+	# Source/System/SwitchGL.c can observe colour changes (per-vertex colours).
+	target_link_options(${GAME_TARGET} PRIVATE "-Wl,--wrap=glColor4f")
+
+	# GCC15 libgcc guards its FEAT_GCS code with CHKFEAT; Ryujinx 1.3.x mis-emulates
+	# CHKFEAT and then faults on the unimplemented `mrs gcspr_el0` on the first C++
+	# exception. NOP the CHKFEAT sites in the linked ELF so the guard behaves like
+	# real Cortex-A57 hardware (GCS path always skipped). Runs before elf2nro reads
+	# the ELF (nx_create_nro's CroMagRally_nro target depends on this one).
+	add_custom_command(TARGET ${GAME_TARGET} POST_BUILD
+		COMMAND python3 ${CMAKE_SOURCE_DIR}/cmake/switch-nop-gcs.py $<TARGET_FILE:${GAME_TARGET}>
+		VERBATIM)
+endif()
 
 
 #------------------------------------------------------------------------------
@@ -282,6 +311,17 @@ if(APPLE)
 		# Make it honor mainmenu.nib (use -replace instead of -insert so it doesn't fail on subsequent builds)
 		COMMAND plutil -replace NSMainNibFile -string "mainmenu" ${BUNDLE_CONTENTS_DIR}/Info.plist
 	)
+elseif(NINTENDO_SWITCH)
+	# Bake Data/ into the NRO's RomFS (mounted at romfs:/ by romfsInit) and pack
+	# the ELF as a homebrew .nro with NACP metadata.
+	nx_generate_nacp(${GAME_TARGET}.nacp
+		NAME "${GAME_MAC_BUNDLE_NAME}"
+		AUTHOR "Pangea Software, Iliyas Jorio"
+		VERSION ${GAME_VERSION})
+	nx_create_nro(${GAME_TARGET}
+		NACP ${GAME_TARGET}.nacp
+		ICON ${CMAKE_SOURCE_DIR}/packaging/CroMagRallySwitch.jpg
+		ROMFS ${CMAKE_SOURCE_DIR}/Data)
 else()
 	set(APP_PARENT_DIR "$<TARGET_FILE_DIR:${GAME_TARGET}>")
 

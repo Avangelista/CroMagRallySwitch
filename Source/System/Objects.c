@@ -716,7 +716,15 @@ short			skelType, playerNum;
 		{
 			if (!clipAlpha)
 			{
+#ifdef __SWITCH__
+				// GL_EQUAL,1 (exact-opaque test) is fragile on the Tegra/Mesa GLES
+				// driver: GL_LINEAR filtering makes interior alpha sample ~0.99 not
+				// exactly 1, so rows of pixels get rejected -> lines/holes through
+				// alpha-clipped signs. Use a >=0.5 cutoff threshold instead.
+				glAlphaFunc(GL_GEQUAL, 0.5f);
+#else
 				glAlphaFunc(GL_EQUAL, 1);	// draw any pixel who's Alpha == 1, skip semi-transparent pixels
+#endif
 				clipAlpha = true;
 			}
 		}
@@ -724,7 +732,11 @@ short			skelType, playerNum;
 		if (clipAlpha)
 		{
 			clipAlpha = false;
+#ifdef __SWITCH__
+			glAlphaFunc(GL_GREATER, 0.0f);	// match the Switch default (see OGL_Support.c)
+#else
 			glAlphaFunc(GL_NOTEQUAL, 0);	// draw any pixel who's Alpha != 0
+#endif
 		}
 #endif
 
@@ -908,7 +920,11 @@ next:
 
 #if DO_EDGE_ALPHA_CLIPPING
 	if (clipAlpha)
+#ifdef __SWITCH__
+		glAlphaFunc(GL_GREATER, 0.0f);
+#else
 		glAlphaFunc(GL_NOTEQUAL, 0);
+#endif
 #endif
 
 

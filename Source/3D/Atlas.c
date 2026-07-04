@@ -716,7 +716,7 @@ ObjNode *TextMesh_NewEmpty(int capacity, NewObjectDefinitionType* newObjDef)
 {
 	// Patch newObjDef with bare minimum flags for TextMesh
 	newObjDef->genre = TEXTMESH_GENRE;
-	newObjDef->flags |= STATUS_BITS_FOR_2D;
+	newObjDef->flags |= STATUS_BITS_FOR_2D;		// includes KEEPBACKFACES on Switch (see globals.h)
 
 	// Fall back to 2D projection if standard projection (3D) is set
 	if (!newObjDef->projection)

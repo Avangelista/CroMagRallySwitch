@@ -208,6 +208,25 @@ static OGLVector3D			fillDirection2 = { -1, -.3, -.3 };
 
 /************** SETUP OGL WINDOW *******************/
 
+#ifdef __SWITCH__
+// switch-sdl2's SDL_GL_GetDrawableSize reports the docked *display* size (1920x1080),
+// but the actual EGL framebuffer surface is 1280x720. Trusting SDL makes the
+// glViewport / pillarbox math target a region that doesn't exist, so the whole frame
+// is clipped and shifted. Capture the TRUE surface size once (from the initial GL
+// viewport, before we ever set a viewport of our own) and substitute it everywhere.
+static int gSwitchSurfaceW = 0, gSwitchSurfaceH = 0;
+static void OverrideSwitchDrawableSize(void)
+{
+	if (gSwitchSurfaceW == 0)
+	{
+		GLint vp[4];
+		glGetIntegerv(GL_VIEWPORT, vp);
+		if (vp[2] > 0 && vp[3] > 0) { gSwitchSurfaceW = vp[2]; gSwitchSurfaceH = vp[3]; }
+	}
+	if (gSwitchSurfaceW > 0) { gGameWindowWidth = gSwitchSurfaceW; gGameWindowHeight = gSwitchSurfaceH; }
+}
+#endif
+
 void OGL_SetupGameView(OGLSetupInputType *setupDefPtr)
 {
 	GAME_ASSERT_MESSAGE(gGameView == NULL, "gGameView overwritten");
@@ -253,6 +272,10 @@ void OGL_SetupGameView(OGLSetupInputType *setupDefPtr)
 				/* UPDATE WINDOW SIZE */
 
 	SDL_GL_GetDrawableSize(gSDLWindow, &gGameWindowWidth, &gGameWindowHeight);
+
+#ifdef __SWITCH__
+	OverrideSwitchDrawableSize();
+#endif
 
 
 				/* SETUP */
@@ -439,7 +462,11 @@ OGLStyleDefType *styleDefPtr = &setupDefPtr->styles;
 			/* ENABLE ALPHA CHANNELS */
 
 	glEnable(GL_ALPHA_TEST);
+#ifdef __SWITCH__
+	glAlphaFunc(GL_GREATER, 0.0f);	// GL_NOTEQUAL alpha-test is unreliable on the Tegra GLES driver; GREATER,0 is equivalent for [0,1] alpha
+#else
 	glAlphaFunc(GL_NOTEQUAL, 0);	// draw any pixel who's Alpha != 0
+#endif
 
 
 		/* SET FOG */
@@ -559,6 +586,9 @@ void OGL_DrawScene(void (*drawRoutine)(void))
 			/* UPDATE WINDOW SIZE ONCE PER FRAME */
 
 	SDL_GL_GetDrawableSize(gSDLWindow, &gGameWindowWidth, &gGameWindowHeight);
+#ifdef __SWITCH__
+	OverrideSwitchDrawableSize();
+#endif
 
 
 			/* INIT SOME STUFF */
@@ -619,7 +649,6 @@ void OGL_DrawScene(void (*drawRoutine)(void))
 				/* GET UPDATED GLOBAL COPIES OF THE VARIOUS MATRICES */
 
 		OGL_Camera_SetPlacementAndUpdateMatrices(gCurrentSplitScreenPane);
-
 
 				/* CALL INPUT DRAW FUNCTION */
 
