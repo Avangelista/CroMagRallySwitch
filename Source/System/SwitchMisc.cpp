@@ -59,4 +59,26 @@ extern "C" void userAppExit() {
 	nxlinkExit();
 }
 
+// Show the Switch "connect controllers" system applet, requesting between
+// minPlayers and maxPlayers controllers. Called from the game (MainMenu) when the
+// player picks a 2/3/4-player game. After this returns, SDL's HID poll surfaces the
+// newly-connected pads as SDL_CONTROLLERDEVICEADDED events, which the game opens as
+// extra local players (see SDLInput.c).
+//
+// Returns true if the required controllers were confirmed; false if the user backed
+// out of the applet (so the caller can abort starting the multiplayer game). Note the
+// applet skips its UI entirely when enough controllers are already connected.
+extern "C" bool Switch_ConnectControllers(int minPlayers, int maxPlayers) {
+	HidLaControllerSupportArg arg;
+	hidLaCreateControllerSupportArg(&arg);				// sane defaults (take-over on, joy-dual permitted, ...)
+	arg.hdr.player_count_min = minPlayers;
+	arg.hdr.player_count_max = maxPlayers;
+	arg.hdr.enable_single_mode = false;					// each player uses a full controller (no single-Joy-Con split)
+
+	HidLaControllerSupportResultInfo result = {};
+	Result rc = hidLaShowControllerSupport(&result, &arg);	// blocks while the system UI is up
+
+	return R_SUCCEEDED(rc) && result.player_count >= minPlayers;
+}
+
 #endif

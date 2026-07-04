@@ -422,6 +422,21 @@ static void OnConfirmPlayMenu(const MenuItem* mi)
 		default:
 			DoFatalAlert("Unsupported pick ID in play menu: %d", mi->id);
 	}
+
+#ifdef __SWITCH__
+	// Ask the player(s) to connect the required number of controllers via the standard
+	// Switch system applet before a local multiplayer game starts. If they back out,
+	// cancel the pick so we don't start a game without enough controllers.
+	if (gNumLocalPlayers >= 2)
+	{
+		extern bool Switch_ConnectControllers(int minPlayers, int maxPlayers);
+		extern void CancelMenuPick(void);
+		if (!Switch_ConnectControllers(gNumLocalPlayers, gNumLocalPlayers))
+		{
+			CancelMenuPick();
+		}
+	}
+#endif
 }
 
 static void OnPickGameMode(const MenuItem* mi)

@@ -874,6 +874,15 @@ static void NavigateSettingEntriesMouseHover(void)
 }
 #endif
 
+// A pick callback may call CancelMenuPick() to abort navigation to the pick's next
+// page and stay put -- e.g. the Switch controller-connect applet was backed out of.
+static bool gCancelMenuPick = false;
+
+void CancelMenuPick(void)
+{
+	gCancelMenuPick = true;
+}
+
 static void NavigatePick(const MenuItem* entry)
 {
 	if (GetNewNeedStateAnyP(kNeed_UIConfirm)
@@ -887,7 +896,15 @@ static void NavigatePick(const MenuItem* entry)
 
 		if (entry->callback)
 		{
+			gCancelMenuPick = false;
 			entry->callback(entry);
+
+			if (gCancelMenuPick)			// callback aborted this pick -- stay on this page
+			{
+				gCancelMenuPick = false;
+				gNav->menuPick = -1;
+				return;
+			}
 		}
 
 		switch (entry->next)
