@@ -87,4 +87,72 @@ extern "C" bool Switch_ConnectControllers(int minPlayers, int maxPlayers) {
 	return R_SUCCEEDED(rc) && result.player_count >= minPlayers;
 }
 
+// ---------------------------------------------------------------------------------------
+// Single (sideways) Joy-Con input.
+//
+// The devkitPro Switch SDL2 backend under-reports a single Joy-Con: it exposes the stick
+// only as a DIGITAL D-pad (never as analog axes), and maps +/- to BACK (there's no START).
+// The real values are still available straight from libnx, so we read them here and the
+// input layer (SDLInput.c) treats the stick as the pad's LEFTX/LEFTY and +/- as pause. The
+// devkitPro backend maps SDL device index i to libnx npad (HidNpadIdType_No1 + i) -- that's
+// our correlation key.
+
+// One PadState per npad slot so we can sample a controller's raw HID independently of SDL
+// (libnx allows multiple PadStates on one npad). Returns the padUpdate'd state IF this pad
+// is a single Joy-Con, else nullptr (caller falls back to SDL's normal analog path).
+static PadState* Switch_SingleJoyconPad(int deviceIndex) {
+	if (deviceIndex < 0 || deviceIndex >= 8)
+		return nullptr;
+
+	static PadState s_pads[8];
+	static bool s_padInit[8] = { false };
+	if (!s_padInit[deviceIndex]) {
+		padInitialize(&s_pads[deviceIndex], (HidNpadIdType)(HidNpadIdType_No1 + deviceIndex));
+		s_padInit[deviceIndex] = true;
+	}
+
+	padUpdate(&s_pads[deviceIndex]);
+
+	u32 style = padGetStyleSet(&s_pads[deviceIndex]);
+	if (!(style & (HidNpadStyleTag_NpadJoyLeft | HidNpadStyleTag_NpadJoyRight)))
+		return nullptr;					// not a single Joy-Con
+	return &s_pads[deviceIndex];
+}
+
+// The left-stick position of a single Joy-Con, in SDL axis convention/range (X = right+,
+// Y = down+, ~[-32767,32767]), or false if `deviceIndex` isn't a single Joy-Con. The input
+// layer feeds this in as the pad's LEFTX/LEFTY so the stick behaves like a normal left stick.
+//
+// A single Joy-Con's stick sits in its NATIVE slot: a left Joy-Con -> the left stick (index
+// 0), a right Joy-Con -> the right stick (index 1). It's reported in the UPRIGHT frame, so we
+// rotate 90 degrees into the player's sideways frame -- MIRRORED between a left and a right
+// Joy-Con (they're held rotated opposite ways). The horizontal (X) axis is confirmed on
+// hardware; the vertical (Y) is its orthogonal component.
+extern "C" bool Switch_GetSingleJoyconStick(int deviceIndex, int* outX, int* outY) {
+	PadState* pad = Switch_SingleJoyconPad(deviceIndex);
+	if (!pad)
+		return false;
+
+	bool isRight = (padGetStyleSet(pad) & HidNpadStyleTag_NpadJoyRight) != 0;
+	HidAnalogStickState s = padGetStickPos(pad, isRight ? 1 : 0);
+	if (isRight) { *outX =  s.y; *outY =  s.x; }
+	else         { *outX = -s.y; *outY = -s.x; }
+	return true;
+}
+
+// True while +/- is held on a single Joy-Con -- the input layer routes this to the pause
+// need. SDL maps a single Joy-Con's +/- to BACK (it has no START), and changing the pause
+// binding's default wouldn't help existing users anyway (saved prefs override it).
+extern "C" bool Switch_SingleJoyconPauseHeld(int deviceIndex) {
+	PadState* pad = Switch_SingleJoyconPad(deviceIndex);
+	if (!pad)
+		return false;
+	return (padGetButtons(pad) & (HidNpadButton_Plus | HidNpadButton_Minus)) != 0;
+}
+
+// True if the controller at this device index is a single (sideways) Joy-Con.
+extern "C" bool Switch_IsSingleJoycon(int deviceIndex) {
+	return Switch_SingleJoyconPad(deviceIndex) != nullptr;
+}
+
 #endif

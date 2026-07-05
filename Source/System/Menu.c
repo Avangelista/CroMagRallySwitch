@@ -1505,8 +1505,48 @@ static bool AwaitGamepadPress(SDL_GameController* controller)
 
 	InputBinding* binding = GetBindingAtRow(gNav->menuRow);
 
+#ifdef __SWITCH__
+	extern int Switch_ControllerDeviceIndex(SDL_GameController* c);
+	int sjcDev = Switch_ControllerDeviceIndex(controller);
+	bool isSingleJoycon = (sjcDev >= 0) && Switch_IsSingleJoycon(sjcDev);
+
+	// A single (sideways) Joy-Con's stick isn't an SDL axis (SDL reports it as the D-pad), so
+	// read it from libnx and bind it as LEFTX/LEFTY -- the same way gameplay reads it, so the
+	// stick is rebindable like any stick. Bind whichever axis is pushed furthest past the
+	// threshold; the D-pad it also reports is ignored in the button loop below.
+	if (isSingleJoycon)
+	{
+		int sx = 0, sy = 0;
+		Switch_GetSingleJoyconStick(sjcDev, &sx, &sy);
+		int ax = (sx < 0) ? -sx : sx;
+		int ay = (sy < 0) ? -sy : sy;
+		int axis = -1, val = 0;
+		if (ax >= ay && ax > kJoystickDeadZone_BindingThreshold) { axis = SDL_CONTROLLER_AXIS_LEFTX; val = sx; }
+		else if (ay > kJoystickDeadZone_BindingThreshold)        { axis = SDL_CONTROLLER_AXIS_LEFTY; val = sy; }
+		if (axis >= 0)
+		{
+			PlayEffect(kSfxCycle);
+			int axisType = (val < 0) ? kInputTypeAxisMinus : kInputTypeAxisPlus;
+			UnbindPadButtonFromAllRemappableInputNeeds(axisType, axis);
+			binding->pad[btnNo].type = axisType;
+			binding->pad[btnNo].id = axis;
+			goto updateText;
+		}
+	}
+#endif
+
 	for (int8_t button = 0; button < SDL_CONTROLLER_BUTTON_MAX; button++)
 	{
+#ifdef __SWITCH__
+		// A single Joy-Con's stick is also reported as the D-pad -- ignore it here (the stick is
+		// bound as LEFTX/LEFTY above; the face/shoulder buttons and +/- stay bindable).
+		if (isSingleJoycon
+			&& (button == SDL_CONTROLLER_BUTTON_DPAD_UP   || button == SDL_CONTROLLER_BUTTON_DPAD_DOWN
+			 || button == SDL_CONTROLLER_BUTTON_DPAD_LEFT || button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT))
+		{
+			continue;
+		}
+#endif
 		if (SDL_GameControllerGetButton(controller, button))
 		{
 			int storeButton = button;

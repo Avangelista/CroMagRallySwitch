@@ -117,6 +117,9 @@ Boolean IsCmdQPressed(void);
 Boolean IsCheatKeyComboDown(void);
 #ifdef __SWITCH__
 int SwitchRemapFaceButton(int b);	// swap SDL positional face buttons <-> Nintendo printed A/B/X/Y labels
+bool Switch_GetSingleJoyconStick(int deviceIndex, int* outX, int* outY);	// a single Joy-Con's stick as LEFTX/LEFTY (SDL reports it only as a D-pad)
+bool Switch_SingleJoyconPauseHeld(int deviceIndex);					// +/- held on a single Joy-Con (SDL maps it to BACK) -> drives the pause need
+bool Switch_IsSingleJoycon(int deviceIndex);						// is the controller at this device index a single (sideways) Joy-Con?
 #endif
 void InitControlBits(void);
 void GetLocalKeyState(void);

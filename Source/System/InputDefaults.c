@@ -66,7 +66,7 @@ const InputBinding kDefaultInputBindings[NUM_CONTROL_NEEDS] =
 	[kNeed_Left] =
 	{
 		.key = { SDL_SCANCODE_LEFT, SDL_SCANCODE_A },
-		.pad = { CAMINUS(LEFTX) },
+		.pad = { CAMINUS(LEFTX) },		// Switch: single Joy-Con steering comes via the libnx analog read in SDLInput.c, not a binding
 	},
 
 	[kNeed_Right] =
@@ -139,7 +139,7 @@ const InputBinding kDefaultInputBindings[NUM_CONTROL_NEEDS] =
 	[kNeed_UIPause] =
 	{
 		.key = { SDL_SCANCODE_ESCAPE },
-		.pad = { CB(START) },
+		.pad = { CB(START) },		// Switch: single Joy-Con pause (+/-) is handled as a code override in SDLInput.c, not a binding (binding defaults are overridden by saved prefs)
 	},
 
 };

@@ -50,6 +50,9 @@ typedef struct Controller
 	bool					fallbackToKeyboard;
 	SDL_GameController*		controllerInstance;
 	SDL_JoystickID			joystickInstance;
+#ifdef __SWITCH__
+	int						deviceIndex;		// SDL device index == libnx npad slot (No1 + this); for the single-Joy-Con analog steering read
+#endif
 	KeyState				needStates[NUM_CONTROL_NEEDS];
 	float					needAnalog[NUM_CONTROL_NEEDS];
 } Controller;
@@ -207,6 +210,16 @@ int SwitchRemapFaceButton(int b)
 		default: return b;
 	}
 }
+
+// The SDL device index (== libnx npad slot) for this controller, or -1. The rebind screen
+// uses it to read a single Joy-Con's real stick from libnx (its stick isn't an SDL axis).
+int Switch_ControllerDeviceIndex(SDL_GameController* c)
+{
+	for (int i = 0; i < MAX_LOCAL_PLAYERS; i++)
+		if (gControllers[i].open && gControllers[i].controllerInstance == c)
+			return gControllers[i].deviceIndex;
+	return -1;
+}
 #endif
 
 static void UpdateControllerSpecificInputNeeds(int controllerNum)
@@ -219,6 +232,15 @@ static void UpdateControllerSpecificInputNeeds(int controllerNum)
 	}
 
 	SDL_GameController* controllerInstance = controller->controllerInstance;
+
+#ifdef __SWITCH__
+	// A single (sideways) Joy-Con's stick is exposed by SDL only as a D-pad. Read the real
+	// analog stick from libnx once and treat it as this pad's LEFT STICK below: LEFTX/LEFTY
+	// bindings use it, and the D-pad it also reports is suppressed. This makes the stick a
+	// normal left stick everywhere -- steering, menus, and rebinding alike.
+	int sjcX = 0, sjcY = 0;
+	bool sjc = Switch_GetSingleJoyconStick(controller->deviceIndex, &sjcX, &sjcY);
+#endif
 
 	for (int needNum = 0; needNum < NUM_CONTROL_NEEDS; needNum++)
 	{
@@ -240,6 +262,11 @@ static void UpdateControllerSpecificInputNeeds(int controllerNum)
 				int buttonID = pb->id;
 #ifdef __SWITCH__
 				buttonID = SwitchRemapFaceButton(buttonID);		// label-space id -> SDL's positional id
+				// Single Joy-Con: its stick is delivered as LEFTX/LEFTY below, so suppress the
+				// D-pad it also reports as -- otherwise the stick would fire digitally as well.
+				if (sjc && (buttonID == SDL_CONTROLLER_BUTTON_DPAD_UP   || buttonID == SDL_CONTROLLER_BUTTON_DPAD_DOWN
+						 || buttonID == SDL_CONTROLLER_BUTTON_DPAD_LEFT || buttonID == SDL_CONTROLLER_BUTTON_DPAD_RIGHT))
+					continue;
 #endif
 				if (0 != SDL_GameControllerGetButton(controllerInstance, buttonID))
 				{
@@ -249,7 +276,14 @@ static void UpdateControllerSpecificInputNeeds(int controllerNum)
 			else if (type == kInputTypeAxisPlus || type == kInputTypeAxisMinus)
 			{
 				float value;
-				int16_t axis = SDL_GameControllerGetAxis(controllerInstance, pb->id);
+				int16_t axis;
+#ifdef __SWITCH__
+				// Single Joy-Con: inject its libnx stick as the left stick.
+				if      (sjc && pb->id == SDL_CONTROLLER_AXIS_LEFTX) axis = (int16_t)sjcX;
+				else if (sjc && pb->id == SDL_CONTROLLER_AXIS_LEFTY) axis = (int16_t)sjcY;
+				else
+#endif
+				axis = SDL_GameControllerGetAxis(controllerInstance, pb->id);
 
 				// Normalize axis value to [0, 1]
 				if (type == kInputTypeAxisPlus)
@@ -270,6 +304,15 @@ static void UpdateControllerSpecificInputNeeds(int controllerNum)
 				actuation = SDL_max(actuation, value);
 			}
 		}
+
+#ifdef __SWITCH__
+		// A single (sideways) Joy-Con's +/- reports (via SDL) as BACK, not START, so pause
+		// never fires. Feed +/- into the pause need directly from libnx -- injected here so it
+		// flows through the same single UpdateKeyState (correct edge detection). Full pads are
+		// unaffected: the helper returns false for them, and + = START works as normal.
+		if (needNum == kNeed_UIPause && Switch_SingleJoyconPauseHeld(controller->deviceIndex))
+			actuation = 1.0f;
+#endif
 
 		controller->needAnalog[needNum] = actuation;
 
@@ -740,6 +783,9 @@ static SDL_GameController* TryOpenControllerFromJoystick(int joystickIndex)
 		.open = true,
 		.controllerInstance = controllerInstance,
 		.joystickInstance = SDL_JoystickGetDeviceInstanceID(joystickIndex),
+#ifdef __SWITCH__
+		.deviceIndex = joystickIndex,
+#endif
 	};
 
 	printf("Opened joystick %d as controller: %s\n",
