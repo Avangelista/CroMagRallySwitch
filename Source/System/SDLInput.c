@@ -567,8 +567,31 @@ Boolean IsCheatKeyComboDown(void)
 {
 	// The original Mac version used B-R-I, but some cheap PC keyboards can't register
 	// this particular key combo, so C-M-R is available as an alternative.
-	return (GetKeyState(SDL_SCANCODE_B) && GetKeyState(SDL_SCANCODE_R) && GetKeyState(SDL_SCANCODE_I))
-		|| (GetKeyState(SDL_SCANCODE_C) && GetKeyState(SDL_SCANCODE_M) && GetKeyState(SDL_SCANCODE_R));
+	if ((GetKeyState(SDL_SCANCODE_B) && GetKeyState(SDL_SCANCODE_R) && GetKeyState(SDL_SCANCODE_I))
+		|| (GetKeyState(SDL_SCANCODE_C) && GetKeyState(SDL_SCANCODE_M) && GetKeyState(SDL_SCANCODE_R)))
+	{
+		return true;
+	}
+
+#ifdef __SWITCH__
+	// The Switch has no keyboard, so the B-R-I unlock cheat is otherwise unreachable.
+	// Gamepad equivalent: click in BOTH analog sticks (L3+R3) at once. Those buttons are
+	// unbound on every screen and are distinct from stick-tilt steering, so this can't
+	// fire accidentally -- important, since this combo is polled every frame (including
+	// the in-race win cheat).
+	for (int i = 0; i < MAX_LOCAL_PLAYERS; i++)
+	{
+		SDL_GameController* c = gControllers[i].controllerInstance;
+		if (gControllers[i].open && c
+			&& SDL_GameControllerGetButton(c, SDL_CONTROLLER_BUTTON_LEFTSTICK)
+			&& SDL_GameControllerGetButton(c, SDL_CONTROLLER_BUTTON_RIGHTSTICK))
+		{
+			return true;
+		}
+	}
+#endif
+
+	return false;
 }
 
 #pragma mark -
