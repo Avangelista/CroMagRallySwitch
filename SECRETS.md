@@ -12,3 +12,14 @@
 | Main menu page 1 | `B`+`R`+`I`* | Set tournament progression to 100%  |
 
 \* If your keyboard has trouble registering the B-R-I keys simultaneously, you can try C-M-R instead.
+
+## On Nintendo Switch
+
+The Switch has no keyboard, so the cheats map to controller buttons instead:
+
+| Secret                                                                              | Switch input                                       |
+|-------------------------------------------------------------------------------------|----------------------------------------------------|
+| Unlock cheat (enter locked track / use locked car / win race / tournament progress) | **Click in both sticks (L3 + R3)** at once         |
+| Swap character skins                                                                | **D-pad ↑ / ↓** on the character-select screen     |
+
+The keyboard-only extras (skip lap, `F8` debug modes, `F1` self-running demo) aren't available on Switch.

@@ -73,3 +73,25 @@ If you want to build the game **manually** instead, the rest of this document de
     ```
     If you'd like to enable runtime sanitizers, append `-DSANITIZE=1` to the **first** `cmake` call above.
 1. The game gets built in `build/CroMagRally`. Enjoy!
+
+## How to build for Nintendo Switch (homebrew)
+
+This produces the unofficial Switch homebrew `.nro`. You need Linux (or WSL2 on Windows) with [devkitPro](https://devkitpro.org/wiki/Getting_Started) installed.
+
+1. Install the devkitPro toolchain and the Switch packages:
+    ```
+    sudo dkp-pacman -S switch-dev switch-sdl2 switch-mesa
+    ```
+    (`switch-mesa` provides `libGLESv1_CM`, the GLES1 driver the renderer runs on.)
+1. Clone the repo **recursively**:
+    ```
+    git clone --recurse-submodules https://github.com/Avangelista/CroMagRallySwitch
+    cd CroMagRallySwitch
+    ```
+1. Configure and build with the devkitA64 toolchain file:
+    ```
+    export DEVKITPRO=/opt/devkitpro
+    cmake -S . -B build-switch -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake -DCMAKE_BUILD_TYPE=Release
+    cmake --build build-switch -j
+    ```
+1. The homebrew build is `build-switch/CroMagRally.nro`. Copy it to the `/switch/` folder on your SD card. Enjoy!
