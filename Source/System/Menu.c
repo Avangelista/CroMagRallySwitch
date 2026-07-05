@@ -1509,10 +1509,14 @@ static bool AwaitGamepadPress(SDL_GameController* controller)
 	{
 		if (SDL_GameControllerGetButton(controller, button))
 		{
+			int storeButton = button;
+#ifdef __SWITCH__
+			storeButton = SwitchRemapFaceButton(button);	// store in printed-label space (see SDLInput.c)
+#endif
 			PlayEffect(kSfxCycle);
-			UnbindPadButtonFromAllRemappableInputNeeds(kInputTypeButton, button);
+			UnbindPadButtonFromAllRemappableInputNeeds(kInputTypeButton, storeButton);
 			binding->pad[btnNo].type = kInputTypeButton;
-			binding->pad[btnNo].id = button;
+			binding->pad[btnNo].id = storeButton;
 			goto updateText;
 		}
 	}

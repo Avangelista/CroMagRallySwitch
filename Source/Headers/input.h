@@ -115,6 +115,9 @@ OGLVector2D GetAnalogSteering(int playerID);
 Boolean UserWantsOut(void);
 Boolean IsCmdQPressed(void);
 Boolean IsCheatKeyComboDown(void);
+#ifdef __SWITCH__
+int SwitchRemapFaceButton(int b);	// swap SDL positional face buttons <-> Nintendo printed A/B/X/Y labels
+#endif
 void InitControlBits(void);
 void GetLocalKeyState(void);
 

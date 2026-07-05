@@ -185,6 +185,30 @@ static void UpdateInputNeeds(void)
 	}
 }
 
+#ifdef __SWITCH__
+// The devkitPro Switch SDL2 build maps the face buttons by POSITION (its mapping is
+// a:b0,b:b1,x:b2,y:b3 with b0 = the bottom button), so SDL_CONTROLLER_BUTTON_A is the
+// bottom button -- which is printed "B" on a Nintendo pad, making A/B and X/Y feel
+// swapped versus the labels. (SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS and its swap
+// logic aren't even compiled into this SDL, so the hint can't correct it.)
+//
+// We keep the game's binding ids in "printed-label" space and translate to SDL's
+// positional space only at the two SDL button boundaries: reading a binding's state
+// (below) and capturing a press while rebinding (Menu.c). The swap is its own inverse
+// (A<->B, X<->Y), so the same call serves both directions.
+int SwitchRemapFaceButton(int b)
+{
+	switch (b)
+	{
+		case SDL_CONTROLLER_BUTTON_A: return SDL_CONTROLLER_BUTTON_B;
+		case SDL_CONTROLLER_BUTTON_B: return SDL_CONTROLLER_BUTTON_A;
+		case SDL_CONTROLLER_BUTTON_X: return SDL_CONTROLLER_BUTTON_Y;
+		case SDL_CONTROLLER_BUTTON_Y: return SDL_CONTROLLER_BUTTON_X;
+		default: return b;
+	}
+}
+#endif
+
 static void UpdateControllerSpecificInputNeeds(int controllerNum)
 {
 	Controller* controller = &gControllers[controllerNum];
@@ -213,7 +237,11 @@ static void UpdateControllerSpecificInputNeeds(int controllerNum)
 
 			if (type == kInputTypeButton)
 			{
-				if (0 != SDL_GameControllerGetButton(controllerInstance, pb->id))
+				int buttonID = pb->id;
+#ifdef __SWITCH__
+				buttonID = SwitchRemapFaceButton(buttonID);		// label-space id -> SDL's positional id
+#endif
+				if (0 != SDL_GameControllerGetButton(controllerInstance, buttonID))
 				{
 					actuation = 1;
 				}

@@ -50,7 +50,13 @@ extern "C" void userAppInit() {
 	mkdir("sdmc:/switch", 0777);							// ensure the base dir exists (usually already does)
 	setenv("XDG_CONFIG_HOME", "sdmc:/switch", 1);
 
-	SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "1");
+	// This SDL build for Switch maps face buttons positionally (SDL_CONTROLLER_BUTTON_A is
+	// the bottom button, printed "B" on a Nintendo pad) and doesn't compile in the label-swap
+	// this hint would trigger, so on its own the hint does nothing here. Force the positional
+	// baseline ("0") -- we remap to the printed A/B/X/Y labels ourselves in SDLInput.c
+	// (SwitchRemapFaceButton). Explicit "0" also stops a future SDL that honors this hint from
+	// double-swapping our remap.
+	SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "0");
 }
 
 extern "C" void userAppExit() {
