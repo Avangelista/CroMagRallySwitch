@@ -10,12 +10,11 @@ This is a port of Pangea Software’s racing game **Cro-Mag Rally** to modern op
 
 ## 🎮 Nintendo Switch homebrew port
 
-This fork ports Cro-Mag Rally to the **Nintendo Switch** as unofficial homebrew. Like every Pangea port it is free of charge — and, like all homebrew, it is **not** an eShop title and cannot be sold (the game is licensed [CC BY-NC-SA 4.0](LICENSE.md); see [Legal info](#legal-info)).
+This fork ports Cro-Mag Rally to the **Nintendo Switch** as unofficial homebrew.
 
 ### Requirements
 
 - A Nintendo Switch running **custom firmware** (e.g. Atmosphère) with the **Homebrew Menu**.
-- It will **not** run on a stock/unmodded console, and **not** through a game-card flashcart (MIG Switch and the like) — those only run signed retail games, whereas homebrew is unsigned code that requires CFW.
 
 ### Installing
 
@@ -27,14 +26,14 @@ This fork ports Cro-Mag Rally to the **Nintendo Switch** as unofficial homebrew.
 
 ### Playing on Switch
 
-- Fully playable with **Joy-Con or a Pro Controller** — up to 4 players in local split-screen.
+- Fully playable with **Joy-Con or a Pro Controller** - up to 4 players in local split-screen.
 - When you pick a 2/3/4-player game, the standard **controller-connection screen** appears so everyone can pair a controller.
 - Buttons use the physical Switch layout; **B** goes back in menus.
 - See [SECRETS](SECRETS.md#on-nintendo-switch) for the gamepad cheat codes (the keyboard combos map to controller buttons).
 
 ### What's different from the desktop version
 
-- Gamepad-first UI — keyboard-only prompts and the keyboard-setup screen are hidden.
+- Gamepad-first UI - keyboard-only prompts and the keyboard-setup screen are hidden.
 - Windowed/fullscreen options are removed (the game always fills the screen).
 - Saves go to the SD card at `sdmc:/switch/CroMagRally/`.
 
