@@ -22,20 +22,11 @@ This fork ports Cro-Mag Rally to the **Nintendo Switch** as unofficial homebrew.
 2. Launch it from the Homebrew Menu.
 3. Preferences and records are saved to `sdmc:/switch/CroMagRally/`.
 
-> **If the game fails to load or runs out of memory**, launch it in *application mode* for full RAM: hold **R** while opening any installed game from the Switch home screen (instead of opening the Homebrew Menu from the Album). Opening from the Album runs homebrew in *applet mode*, which has far less memory available.
-
 ### Playing on Switch
 
 - Fully playable with **Joy-Con or a Pro Controller** - up to 4 players in local split-screen.
 - When you pick a 2/3/4-player game, the standard **controller-connection screen** appears so everyone can pair a controller.
-- Buttons use the physical Switch layout; **B** goes back in menus.
-- See [SECRETS](SECRETS.md#on-nintendo-switch) for the gamepad cheat codes (the keyboard combos map to controller buttons).
-
-### What's different from the desktop version
-
-- Gamepad-first UI - keyboard-only prompts and the keyboard-setup screen are hidden.
-- Windowed/fullscreen options are removed (the game always fills the screen).
-- Saves go to the SD card at `sdmc:/switch/CroMagRally/`.
+- See [SECRETS](SECRETS.md#on-nintendo-switch) for the gamepad cheat codes.
 
 This port reuses the approach of [carstene1ns's Nanosaur Switch port](https://github.com/carstene1ns/Nanosaur/tree/ports) and is built with [devkitPro](https://devkitpro.org)/libnx. See [BUILD](BUILD.md#how-to-build-for-nintendo-switch-homebrew) to build the `.nro` yourself.
 
